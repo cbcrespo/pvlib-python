@@ -646,7 +646,7 @@ def isotropic(surface_tilt, dhi):
 
 
 def klucher(surface_tilt, surface_azimuth, dhi, ghi, solar_zenith,
-            solar_azimuth):
+            solar_azimuth, return_components=False):
     r'''
     Determine diffuse irradiance from the sky on a tilted surface
     using the Klucher (1979) model.
@@ -671,10 +671,27 @@ def klucher(surface_tilt, surface_azimuth, dhi, ghi, solar_zenith,
     solar_azimuth : numeric
         Sun azimuth angles. See :term:`solar_azimuth`. [°]
 
+    return_components : bool, default `False`
+        If `False`, ``sky_diffuse`` is returned.
+        If `True`, ``diffuse_components`` is returned.
+
     Returns
-    -------
-    diffuse : numeric
-        The sky diffuse component of the solar radiation. [Wm⁻²]
+    --------
+    numeric, Dict, or DataFrame
+        Return type controlled by ``return_components`` argument.
+        If `False`, ``sky_diffuse`` is returned.
+        If `True`, ``diffuse_components`` is returned.
+
+    sky_diffuse : numeric
+        The sky diffuse component of the solar radiation on a tilted
+        surface. [Wm⁻²]
+
+    diffuse_components : Dict (array input) or DataFrame (Series input)
+        Keys/columns are:
+            * poa_sky_diffuse: Total sky diffuse
+            * poa_isotropic
+            * poa_circumsolar
+            * poa_horizon
 
     Notes
     -----
@@ -727,13 +744,32 @@ def klucher(surface_tilt, surface_azimuth, dhi, ghi, solar_zenith,
     except AttributeError:
         F = np.where(np.isnan(F), 0, F)
 
+    c = F * (cos_tt ** 2) * (tools.sind(solar_zenith) ** 3)
+    h = F * (tools.sind(0.5 * surface_tilt) ** 3)
+
+    with np.errstate(invalid='ignore', divide='ignore'):
+        frac_c = np.where(h + c == 0, 0, c / (h + c))
+        frac_h = np.where(h + c == 0, 0, h / (h + c))
+
     term1 = 0.5 * (1 + tools.cosd(surface_tilt))
-    term2 = 1 + F * (tools.sind(0.5 * surface_tilt) ** 3)
-    term3 = 1 + F * (cos_tt ** 2) * (tools.sind(solar_zenith) ** 3)
+    # distribute the cross-coupling term h * c proportionally to h and c
+    term2 = term1 * (c + frac_c * h * c)
+    term3 = term1 * (h + frac_h * h * c)
 
-    sky_diffuse = dhi * term1 * term2 * term3
+    sky_diffuse = dhi * (term1 + term2 + term3)
 
-    return sky_diffuse
+    if return_components:
+        diffuse_components = {
+            'poa_sky_diffuse': sky_diffuse,
+            'poa_isotropic': dhi * term1,
+            'poa_circumsolar': dhi * term2,
+            'poa_horizon': dhi * term3
+        }
+        if isinstance(sky_diffuse, pd.Series):
+            diffuse_components = pd.DataFrame(diffuse_components)
+        return diffuse_components
+    else:
+        return sky_diffuse
 
 
 def haydavies(surface_tilt, surface_azimuth, dhi, dni, dni_extra,

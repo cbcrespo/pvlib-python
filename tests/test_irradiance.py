@@ -200,6 +200,41 @@ def test_klucher_series(irrad_data, ephem_data):
     assert_allclose(result, expected, atol=1e-4)
 
 
+def test_klucher_components(irrad_data, ephem_data, dni_et):
+    keys = ['poa_sky_diffuse', 'poa_isotropic', 'poa_circumsolar',
+            'poa_horizon']
+    expected = pd.DataFrame(np.array(
+        [[0, 36.789794, 109.209347, 56.965916],
+         [0, 35.728402, 104.601328, 54.777191],
+         [0, 0, 0.460774, 0.120361],
+         [0, 1.061392, 4.147245, 2.068364]]).T,
+        columns=keys,
+        index=irrad_data.index
+    )
+    # pandas
+    result = irradiance.klucher(
+        40, 180, irrad_data['dhi'], irrad_data['ghi'],
+        ephem_data['apparent_zenith'], ephem_data['azimuth'],
+        return_components=True)
+    assert_frame_equal(result, expected, check_less_precise=4)
+    # numpy
+    result = irradiance.klucher(
+        40, 180, irrad_data['dhi'].values, irrad_data['ghi'].values,
+        ephem_data['apparent_zenith'].values,
+        ephem_data['azimuth'].values, return_components=True)
+    for key in keys:
+        assert_allclose(result[key], expected[key], atol=1e-4)
+    assert isinstance(result, dict)
+    # scalar
+    result = irradiance.klucher(
+        40, 180, irrad_data['dhi'].values[-1],
+        irrad_data['ghi'].values[-1], ephem_data['apparent_zenith'].values[-1],
+        ephem_data['azimuth'].values[-1], return_components=True)
+    for key in keys:
+        assert_allclose(result[key], expected[key].iloc[-1], atol=1e-4)
+    assert isinstance(result, dict)
+
+
 def test_haydavies(irrad_data, ephem_data, dni_et):
     result = irradiance.haydavies(
         40, 180, irrad_data['dhi'], irrad_data['dni'], dni_et,
