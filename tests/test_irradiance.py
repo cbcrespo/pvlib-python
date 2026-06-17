@@ -200,7 +200,7 @@ def test_klucher_series(irrad_data, ephem_data):
     assert_allclose(result, expected, atol=1e-4)
 
 
-def test_klucher_components(irrad_data, ephem_data, dni_et):
+def test_klucher_components(irrad_data, ephem_data):
     keys = ['poa_sky_diffuse', 'poa_isotropic', 'poa_circumsolar',
             'poa_horizon']
     expected = pd.DataFrame(np.array(
