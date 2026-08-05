@@ -308,7 +308,7 @@ class PVSystem:
     @_unwrap_single_value
     def get_irradiance(self, solar_zenith, solar_azimuth, dni, ghi, dhi,
                        dni_extra=None, airmass=None, albedo=None,
-                       model='haydavies', **kwargs):
+                       model='haydavies', diffuse_components=False, **kwargs):
         """
         Uses :py:func:`pvlib.irradiance.get_total_irradiance` to
         calculate the plane of array irradiance components on the tilted
@@ -335,6 +335,11 @@ class PVSystem:
             Ground surface albedo. [unitless]
         model : String, default 'haydavies'
             Irradiance model.
+        diffuse_components : bool, default False
+            If `True`, returns values for the different diffuse irradiance
+            components available from the selected model
+            (e.g., isotropic, circumsolar, horizon brightening).
+            If `False`, only the total diffuse irradiance is returned.
 
         kwargs
             Extra parameters passed to
@@ -374,7 +379,9 @@ class PVSystem:
             array.get_irradiance(solar_zenith, solar_azimuth,
                                  dni, ghi, dhi,
                                  dni_extra=dni_extra, airmass=airmass,
-                                 albedo=albedo, model=model, **kwargs)
+                                 albedo=albedo, model=model,
+                                 diffuse_components=diffuse_components,
+                                 **kwargs)
             for array, dni, ghi, dhi, albedo in zip(
                 self.arrays, dni, ghi, dhi, albedo
             )
@@ -383,8 +390,8 @@ class PVSystem:
     @_unwrap_single_value
     def get_iam(self, aoi, iam_model='physical'):
         """
-        Determine the incidence angle modifier using the method specified by
-        ``iam_model``.
+        Determine the incidence angle modifier for direct irradiance
+        using the method specified by ``iam_model``.
 
         Parameters for the selected IAM model are expected to be in
         ``PVSystem.module_parameters``. Default parameters are available for
@@ -411,6 +418,48 @@ class PVSystem:
         aoi = self._validate_per_array(aoi)
         return tuple(array.get_iam(aoi, iam_model)
                      for array, aoi in zip(self.arrays, aoi))
+
+    @_unwrap_single_value
+    def get_iam_diffuse(self, surface_tilt, iam_model='marion_diffuse',
+                        marion_model=None, **kwargs):
+        """
+        Determine the incidence angle modifier for diffuse irradiance using the
+        method specified by ``iam_model``.
+
+        Parameters for the selected IAM model are expected to be in
+        ``Array.module_parameters``. Default parameters are available for
+        the 'marion_diffuse' and 'martin_ruiz_diffuse' models.
+
+        Parameters
+        ----------
+        surface_tilt : float or Series
+            The tilt angle of the surface in degrees.
+        iam_model : string, default 'marion_diffuse'
+            The IAM model to be used. Valid strings are 'marion_diffuse'
+            and 'martin_ruiz_diffuse'.
+        marion_model : string, default None
+            The IAM function to evaluate across a solid angle. Only used when
+            ``iam_model='marion_diffuse'``. Must be one of `'ashrae',
+            'physical', 'martin_ruiz', 'sapm', and 'schlick'`.
+
+        kwargs : dict, optional
+            Additional keyword arguments passed to the IAM model function.
+
+        Returns
+        -------
+        iam_diffuse : dict
+            The AOI modifiers for different diffuse irradiance components.
+            Included components depend on the selected ``iam_model``.
+
+        Raises
+        ------
+        ValueError
+            if `iam_model` is not a valid model name.
+        """
+        surface_tilt = self._validate_per_array(surface_tilt)
+        return tuple(array.get_iam_diffuse(tilt, iam_model=iam_model,
+                                           marion_model=marion_model, **kwargs)
+                     for array, tilt in zip(self.arrays, surface_tilt))
 
     @_unwrap_single_value
     def get_cell_temperature(self, poa_global, temp_air, wind_speed, model,
@@ -1096,7 +1145,7 @@ class Array:
 
     def get_irradiance(self, solar_zenith, solar_azimuth, dni, ghi, dhi,
                        dni_extra=None, airmass=None, albedo=None,
-                       model='haydavies', **kwargs):
+                       model='haydavies', diffuse_components=False, **kwargs):
         """
         Get plane of array irradiance components.
 
@@ -1124,6 +1173,11 @@ class Array:
             Ground surface albedo. [unitless]
         model : String, default 'haydavies'
             Irradiance model.
+        diffuse_components : bool, default False
+            If `True`, returns values for the different diffuse irradiance
+            components available from the selected model
+            (e.g., isotropic, circumsolar, horizon brightening).
+            If `False`, only the total diffuse irradiance is returned.
 
         kwargs
             Extra parameters passed to
@@ -1164,20 +1218,23 @@ class Array:
             airmass = atmosphere.get_relative_airmass(solar_zenith)
 
         orientation = self.mount.get_orientation(solar_zenith, solar_azimuth)
-        return irradiance.get_total_irradiance(orientation['surface_tilt'],
-                                               orientation['surface_azimuth'],
-                                               solar_zenith, solar_azimuth,
-                                               dni, ghi, dhi,
-                                               dni_extra=dni_extra,
-                                               airmass=airmass,
-                                               albedo=albedo,
-                                               model=model,
-                                               **kwargs)
+        return irradiance.get_total_irradiance(
+            orientation['surface_tilt'],
+            orientation['surface_azimuth'],
+            solar_zenith, solar_azimuth,
+            dni, ghi, dhi,
+            dni_extra=dni_extra,
+            airmass=airmass,
+            albedo=albedo,
+            model=model,
+            diffuse_components=diffuse_components,
+            **kwargs
+        )
 
     def get_iam(self, aoi, iam_model='physical'):
         """
-        Determine the incidence angle modifier using the method specified by
-        ``iam_model``.
+        Determine the incidence angle modifier for direct irradiance
+        using the method specified by ``iam_model``.
 
         Parameters for the selected IAM model are expected to be in
         ``Array.module_parameters``. Default parameters are available for
@@ -1215,6 +1272,62 @@ class Array:
             return iam.sapm(aoi, self.module_parameters)
         else:
             raise ValueError(model + ' is not a valid IAM model')
+
+    def get_iam_diffuse(self, surface_tilt, iam_model='marion_diffuse',
+                        marion_model=None, **kwargs):
+        """
+        Determine the incidence angle modifier for various diffuse irradiance
+        components using the method specified by ``iam_model``.
+
+        Parameters for the selected IAM model are expected to be in
+        ``Array.module_parameters``. Default parameters are available for
+        the 'marion_diffuse' and 'martin_ruiz_diffuse' models.
+
+        Parameters
+        ----------
+        surface_tilt : float or Series
+            The tilt angle of the surface in degrees.
+        iam_model : string, default 'marion_diffuse'
+            The IAM model to be used. Valid strings are 'marion_diffuse'
+            and 'martin_ruiz_diffuse'.
+        marion_model : string, default None
+            The IAM function to evaluate across a solid angle. Only used when
+            ``iam_model='marion_diffuse'``. Must be one of `'ashrae',
+            'physical', 'martin_ruiz' and 'sapm'.
+
+        kwargs : dict, optional
+            Additional keyword arguments passed to the IAM model function.
+
+        Returns
+        -------
+        iam_diffuse : dict
+            The AOI modifiers for different diffuse irradiance components.
+            Included components depend on the selected ``iam_model``.
+
+        Raises
+        ------
+        ValueError
+            if `iam_model` is not a valid model name.
+        ValueError
+            if `iam_model` is 'marion_diffuse' and `marion_model` is None.
+        """
+        model = iam_model.lower()
+        if model == 'marion_diffuse' and marion_model is None:
+            raise ValueError('marion_model must be specified when '
+                             'iam_model="marion_diffuse"')
+        if model in ['marion_diffuse', 'martin_ruiz_diffuse']:
+            func = getattr(iam, model)  # get function at pvlib.iam
+            # get all parameters from function signature to retrieve them from
+            # module_parameters if present
+            params = set(inspect.signature(func).parameters.keys())
+            kwargs.update(_build_kwargs(params, self.module_parameters))
+            if iam_model == 'marion_diffuse':
+                return func(model=marion_model, surface_tilt=surface_tilt,
+                            **kwargs)
+            else:
+                return func(surface_tilt=surface_tilt, **kwargs)
+        else:
+            raise ValueError(model + ' is not a valid diffuse IAM model')
 
     def get_cell_temperature(self, poa_global, temp_air, wind_speed, model,
                              effective_irradiance=None, longwave_down=None):
