@@ -347,7 +347,7 @@ def martin_ruiz_diffuse(surface_tilt, a_r=0.16, c1=0.4244, c2=None):
     Returns
     -------
     iam : dict
-        IAM values for each type of diffuse irradiance:
+        IAM values for each type of diffuse irradiance (assuming isotropy):
 
         * 'sky': radiation from the sky dome
         * 'ground': radiation reflected from the ground
@@ -605,7 +605,7 @@ def marion_diffuse(model, surface_tilt, **kwargs):
     Returns
     -------
     iam : dict
-        IAM values for each type of diffuse irradiance:
+        IAM values for each type of diffuse irradiance (assuming isotropy):
 
         * 'sky': radiation from the sky dome (zenith <= 90)
         * 'horizon': radiation from the region of the sky near the horizon
@@ -893,7 +893,7 @@ def schlick_diffuse(surface_tilt):
     Returns
     -------
     iam : dict
-        IAM values for each type of diffuse irradiance:
+        IAM values for each type of diffuse irradiance (assuming isotropy):
 
         * 'sky': radiation from the sky dome
         * 'ground': radiation reflected from the ground
