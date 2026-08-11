@@ -346,11 +346,11 @@ def martin_ruiz_diffuse(surface_tilt, a_r=0.16, c1=0.4244, c2=None):
 
     Returns
     -------
-    iam_sky : numeric
-        The incident angle modifier for sky diffuse
+    iam : dict
+        IAM values for each type of diffuse irradiance:
 
-    iam_ground : numeric
-        The incident angle modifier for ground-reflected diffuse
+        * 'sky': radiation from the sky dome
+        * 'ground': radiation reflected from the ground
 
     Notes
     -----
@@ -419,7 +419,9 @@ def martin_ruiz_diffuse(surface_tilt, a_r=0.16, c1=0.4244, c2=None):
         iam_sky = pd.Series(iam_sky, index=out_index, name='iam_sky')
         iam_gnd = pd.Series(iam_gnd, index=out_index, name='iam_ground')
 
-    return iam_sky, iam_gnd
+    iam = {'sky': iam_sky, 'ground': iam_gnd}
+
+    return iam
 
 
 def interp(aoi, theta_ref, iam_ref, method='linear', normalize=True):
@@ -890,11 +892,11 @@ def schlick_diffuse(surface_tilt):
 
     Returns
     -------
-    iam_sky : numeric
-        The incident angle modifier for sky diffuse.
+    iam : dict
+        IAM values for each type of diffuse irradiance:
 
-    iam_ground : numeric
-        The incident angle modifier for ground-reflected diffuse.
+        * 'sky': radiation from the sky dome
+        * 'ground': radiation reflected from the ground
 
     See Also
     --------
@@ -961,7 +963,9 @@ def schlick_diffuse(surface_tilt):
         cuk = pd.Series(cuk, surface_tilt.index)
         cug = pd.Series(cug, surface_tilt.index)
 
-    return cuk, cug
+    iam = {'sky': cuk, 'ground': cug}
+
+    return iam
 
 
 def _get_model(model_name):
