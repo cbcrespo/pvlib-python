@@ -316,8 +316,11 @@ def martin_ruiz(aoi, a_r=0.16):
 
 def martin_ruiz_diffuse(surface_tilt, a_r=0.16, c1=0.4244, c2=None):
     '''
-    Determine the incidence angle modifiers (iam) for diffuse sky and
+    Determine the incidence angle modifiers (IAM) for sky diffuse and
     ground-reflected irradiance using the Martin and Ruiz incident angle model.
+
+    As described in [1]_, the IAMs result from integrals that assume the
+    incoming sky diffuse and ground-reflected irradiance are isotropic.
 
     Parameters
     ----------
@@ -347,7 +350,8 @@ def martin_ruiz_diffuse(surface_tilt, a_r=0.16, c1=0.4244, c2=None):
     Returns
     -------
     iam : dict
-        IAM values for each type of diffuse irradiance (assuming isotropy):
+        Incident Angle Modifier (see :term:`iam`) values for each type of
+        diffuse irradiance:
 
         * 'sky': radiation from the sky dome
         * 'ground': radiation reflected from the ground
@@ -585,8 +589,8 @@ def sapm(aoi, module, upper=None):
 
 def marion_diffuse(model, surface_tilt, **kwargs):
     """
-    Determine diffuse irradiance incidence angle modifiers using Marion's
-    method of integrating over solid angle.
+    Determine diffuse irradiance incidence angle modifiers (IAM) using
+    Marion's method of integrating over solid angle.
 
     Parameters
     ----------
@@ -605,7 +609,8 @@ def marion_diffuse(model, surface_tilt, **kwargs):
     Returns
     -------
     iam : dict
-        IAM values for each type of diffuse irradiance (assuming isotropy):
+        Incident Angle Modifier (see :term:`iam`) values for each type of
+        diffuse irradiance:
 
         * 'sky': radiation from the sky dome (zenith <= 90)
         * 'horizon': radiation from the region of the sky near the horizon
@@ -861,7 +866,7 @@ def schlick(aoi):
 
 def schlick_diffuse(surface_tilt):
     r"""
-    Determine the incidence angle modifiers (IAM) for diffuse sky and
+    Determine the incidence angle modifiers (IAM) for sky diffuse and
     ground-reflected irradiance on a tilted surface using the Schlick
     incident angle model.
 
@@ -893,7 +898,8 @@ def schlick_diffuse(surface_tilt):
     Returns
     -------
     iam : dict
-        IAM values for each type of diffuse irradiance (assuming isotropy):
+        Incident Angle Modifier (see :term:`iam`) values for each type of
+        diffuse irradiance:
 
         * 'sky': radiation from the sky dome
         * 'ground': radiation reflected from the ground
