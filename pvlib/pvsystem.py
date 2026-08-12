@@ -435,8 +435,8 @@ class PVSystem:
         surface_tilt : float or Series
             The tilt angle of the surface in degrees.
         iam_model : string, default 'marion_diffuse'
-            The IAM model to be used. Valid strings are 'marion_diffuse'
-            and 'martin_ruiz_diffuse'.
+            The IAM model to be used. Valid strings are 'marion_diffuse',
+            'martin_ruiz_diffuse', and 'schlick_diffuse'.
         marion_model : string, default None
             The IAM function to evaluate across a solid angle. Only used when
             ``iam_model='marion_diffuse'``. Must be one of `'ashrae',
@@ -1288,8 +1288,8 @@ class Array:
         surface_tilt : float or Series
             The tilt angle of the surface in degrees.
         iam_model : string, default 'marion_diffuse'
-            The IAM model to be used. Valid strings are 'marion_diffuse'
-            and 'martin_ruiz_diffuse'.
+            The IAM model to be used. Valid strings are 'marion_diffuse',
+            'martin_ruiz_diffuse' and 'schlick_diffuse'.
         marion_model : string, default None
             The IAM function to evaluate across a solid angle. Only used when
             ``iam_model='marion_diffuse'``. Must be one of `'ashrae',
@@ -1315,7 +1315,8 @@ class Array:
         if model == 'marion_diffuse' and marion_model is None:
             raise ValueError('marion_model must be specified when '
                              'iam_model="marion_diffuse"')
-        if model in ['marion_diffuse', 'martin_ruiz_diffuse']:
+        if model in ['marion_diffuse', 'martin_ruiz_diffuse',
+                     'schlick_diffuse']:
             func = getattr(iam, model)  # get function at pvlib.iam
             # get all parameters from function signature to retrieve them from
             # module_parameters if present

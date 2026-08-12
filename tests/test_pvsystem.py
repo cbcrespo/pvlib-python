@@ -117,12 +117,14 @@ def test_PVSystem_get_iam_diffuse_marion(mocker):
     assert set(iam.keys()) == {'sky', 'ground', 'horizon'}
 
 
-def test_PVSystem_get_iam_diffuse_martin_ruiz(mocker):
-    model_params = {'a_r': 0.16}
-    m = mocker.spy(_iam, 'martin_ruiz_diffuse')
+@pytest.mark.parametrize('iam_model', ['martin_ruiz_diffuse',
+                                       'schlick_diffuse'])
+def test_PVSystem_get_iam_diffuse_martin_ruiz(iam_model, mocker):
+    model_params = {'a_r': 0.16} if iam_model == 'martin_ruiz_diffuse' else {}
+    m = mocker.spy(_iam, iam_model)
     system = pvsystem.PVSystem(module_parameters=model_params)
     tilt = 30
-    iam = system.get_iam_diffuse(tilt, iam_model='martin_ruiz_diffuse')
+    iam = system.get_iam_diffuse(tilt, iam_model=iam_model)
     m.assert_called_with(surface_tilt=tilt, **model_params)
     assert isinstance(iam, dict)
 
