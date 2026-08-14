@@ -120,15 +120,19 @@ def test_PVSystem_get_iam_diffuse_marion(mocker):
     tilt = 30
     iam = system.get_iam_diffuse(tilt, iam_model='marion_diffuse',
                                  marion_model='ashrae', **model_params)
-    print(m.call_args)
     m.assert_called_with(model='ashrae', surface_tilt=tilt, **model_params)
     assert isinstance(iam, dict)
     assert set(iam.keys()) == {'sky', 'ground', 'horizon'}
 
+    tilt = pd.Series([30, 60])
+    iam = system.get_iam_diffuse(tilt, iam_model='marion_diffuse',
+                                 marion_model='ashrae', **model_params)
+    assert isinstance(iam, pd.DataFrame)
+
 
 @pytest.mark.parametrize('iam_model', ['martin_ruiz_diffuse',
                                        'schlick_diffuse'])
-def test_PVSystem_get_iam_diffuse_martin_ruiz(iam_model, mocker):
+def test_PVSystem_get_iam_diffuse(iam_model, mocker):
     model_params = {'a_r': 0.16} if iam_model == 'martin_ruiz_diffuse' else {}
     m = mocker.spy(_iam, iam_model)
     system = pvsystem.PVSystem(module_parameters=model_params)

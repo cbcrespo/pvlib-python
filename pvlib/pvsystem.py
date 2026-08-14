@@ -446,7 +446,7 @@ class PVSystem:
 
         Returns
         -------
-        iam_diffuse : dict
+        iam_diffuse : dict or DataFrame
             The AOI modifiers for different diffuse irradiance components.
             Included components depend on the selected ``iam_model``.
 
@@ -1297,7 +1297,7 @@ class Array:
 
         Returns
         -------
-        iam_diffuse : dict
+        iam_diffuse : dict or DataFrame
             The AOI modifiers for different diffuse irradiance components.
             Included components depend on the selected ``iam_model``.
 
@@ -1320,12 +1320,17 @@ class Array:
             params = set(inspect.signature(func).parameters.keys())
             kwargs.update(_build_kwargs(params, self.module_parameters))
             if iam_model == 'marion_diffuse':
-                return func(model=marion_model, surface_tilt=surface_tilt,
+                iams = func(model=marion_model, surface_tilt=surface_tilt,
                             **kwargs)
             else:
-                return func(surface_tilt=surface_tilt, **kwargs)
+                iams = func(surface_tilt=surface_tilt, **kwargs)
         else:
             raise ValueError(model + ' is not a valid diffuse IAM model')
+
+        if isinstance(surface_tilt, pd.Series):
+            iams = pd.DataFrame(iams, index=surface_tilt.index)
+
+        return iams
 
     def get_cell_temperature(self, poa_global, temp_air, wind_speed, model,
                              effective_irradiance=None, longwave_down=None):
