@@ -430,7 +430,7 @@ def get_sky_diffuse(surface_tilt, surface_azimuth,
 
     Returns
     -------
-    numeric, Dict, or DataFrame
+    numeric, dict, or DataFrame
         Return type controlled by ``return_components`` argument.
         If `False`, total sky diffuse irradiance in the plane of array
         is returned (numeric). [Wm⁻²]
@@ -518,7 +518,7 @@ def poa_components(aoi, dni, poa_sky_diffuse, poa_ground_diffuse):
         Direct normal irradiance, as measured from a TMY file or
         calculated with a clearsky model. See :term:`dni`. [Wm⁻²]
 
-    poa_sky_diffuse : numeric, Dict or DataFrame
+    poa_sky_diffuse : numeric, dict or DataFrame
         Diffuse irradiance in the plane of the modules, as
         calculated by a diffuse irradiance translation function. [Wm⁻²]
 
@@ -529,7 +529,7 @@ def poa_components(aoi, dni, poa_sky_diffuse, poa_ground_diffuse):
 
     Returns
     -------
-    irrads : Dict or DataFrame
+    irrads : dict or DataFrame
         Contains the following keys:
 
         * ``poa_global`` : Total irradiance on a tilted plane. [Wm⁻²]
@@ -540,7 +540,7 @@ def poa_components(aoi, dni, poa_sky_diffuse, poa_ground_diffuse):
         * ``poa_ground_diffuse`` : The ground diffuse component of irradiance
           on a tilted plane. [Wm⁻²]
 
-        If ``poa_sky_diffuse`` is a Dict or DataFrame, ``irrads`` will
+        If ``poa_sky_diffuse`` is a dict or DataFrame, ``irrads`` will
         contain additional keys for each of the diffuse components returned by
         the selected diffuse irradiance model.
 
@@ -1114,6 +1114,12 @@ def reindl(surface_tilt, surface_azimuth, dhi, dni, ghi, dni_extra,
         return poa_sky_diffuse
 
 
+@deprecated(
+    since="0.16.0",
+    removal="0.17.0",
+    name="pvlib.irradiance.king",
+    alternative="other diffuse transposition models in pvlib.irradiance",
+)
 def king(surface_tilt, dhi, ghi, solar_zenith):
     '''
     Determine diffuse irradiance from the sky on a tilted surface using
@@ -1278,8 +1284,12 @@ def perez(surface_tilt, surface_azimuth, dhi, dni, dni_extra,
     delta = dhi * airmass / dni_extra
 
     # epsilon is the sky's "clearness"
-    with np.errstate(invalid='ignore'):
-        eps = ((dhi + dni) / dhi + kappa * (z ** 3)) / (1 + kappa * (z ** 3))
+    # np.divide so a Python-scalar dhi=0 yields inf/nan like the array
+    # path (handled below via digitize) instead of raising ZeroDivisionError,
+    # which np.errstate cannot suppress for native scalar division.
+    with np.errstate(invalid='ignore', divide='ignore'):
+        eps = (np.divide(dhi + dni, dhi) + kappa * (z ** 3)) \
+            / (1 + kappa * (z ** 3))
 
     # numpy indexing below will not work with a Series
     if isinstance(eps, pd.Series):
@@ -2169,16 +2179,15 @@ def _delta_kt_prime_dirint(kt_prime, use_delta_kt_prime, times):
     for use with :py:func:`_dirint_bins`.
     """
     if use_delta_kt_prime:
-        # Perez eqn 2
+        # row-wise mean of neighbor abs-differences; pandas skips NaN so this
+        # covers 0/1/2 valid neighbors (Perez eqn 2 interior,
+        # eqn 3 boundary/gap)
         kt_next = kt_prime.shift(-1)
         kt_previous = kt_prime.shift(1)
-        # replace nan with values that implement Perez Eq 3 for first and last
-        # positions. Use kt_previous and kt_next to handle series of length 1
-        kt_next.iloc[-1] = kt_previous.iloc[-1]
-        kt_previous.iloc[0] = kt_next.iloc[0]
-        delta_kt_prime = 0.5 * ((kt_prime - kt_next).abs().add(
-                                (kt_prime - kt_previous).abs(),
-                                fill_value=0))
+        delta_kt_prime = pd.DataFrame({
+            'next': (kt_prime - kt_next).abs(),
+            'prev': (kt_prime - kt_previous).abs(),
+        }).mean(axis=1)
     else:
         # do not change unless also modifying _dirint_bins
         delta_kt_prime = pd.Series(-1, index=times)
@@ -3218,64 +3227,6 @@ def campbell_norman(zenith, transmittance, pressure=101325.0,
     cos_zen = tools.cosd(zenith)
     dhi = 0.3 * (1.0 - tau**airmass) * dni_extra * cos_zen
     ghi = dhi + dni * cos_zen
-
-    irrads = OrderedDict()
-    irrads['ghi'] = ghi
-    irrads['dni'] = dni
-    irrads['dhi'] = dhi
-
-    if isinstance(ghi, pd.Series):
-        irrads = pd.DataFrame(irrads)
-
-    return irrads
-
-
-def _liujordan(zenith, transmittance, airmass, dni_extra=1367.0):
-    '''
-    Determine DNI, DHI, GHI from extraterrestrial flux, transmittance,
-    and optical air mass number.
-
-    Liu and Jordan, 1960, developed a simplified direct radiation model.
-    DHI is from an empirical equation for diffuse radiation from Liu and
-    Jordan, 1960.
-
-    Parameters
-    ----------
-    zenith: pd.Series
-        True (not refraction-corrected) zenith angles in decimal
-        degrees. If Z is a vector it must be of the same size as all
-        other vector inputs. [°]
-
-    transmittance: float
-        Atmospheric transmittance between 0 and 1.
-
-    airmass: numeric
-        Optical air mass. [unitless]
-
-    dni_extra: float, default 1367.0
-        Direct irradiance incident at the top of the atmosphere.
-
-    Returns
-    -------
-    irradiance: DataFrame
-        Modeled direct normal irradiance, direct horizontal irradiance,
-        and global horizontal irradiance in Wm⁻²
-
-    References
-    ----------
-    .. [1] Campbell, G. S., J. M. Norman (1998) An Introduction to
-       Environmental Biophysics. 2nd Ed. New York: Springer.
-
-    .. [2] Liu, B. Y., R. C. Jordan, (1960). "The interrelationship and
-       characteristic distribution of direct, diffuse, and total solar
-       radiation".  Solar Energy 4:1-19
-    '''
-
-    tau = transmittance
-
-    dni = dni_extra*tau**airmass
-    dhi = 0.3 * (1.0 - tau**airmass) * dni_extra * np.cos(np.radians(zenith))
-    ghi = dhi + dni * np.cos(np.radians(zenith))
 
     irrads = OrderedDict()
     irrads['ghi'] = ghi

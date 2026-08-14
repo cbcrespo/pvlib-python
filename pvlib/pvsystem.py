@@ -16,7 +16,6 @@ import pandas as pd
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import Optional, Union
-from pvlib._deprecation import renamed_kwarg_warning
 import pvlib  # used to avoid albedo name collision in the Array class
 from pvlib import (atmosphere, iam, inverter, irradiance,
                    singlediode as _singlediode, spectrum, temperature)
@@ -404,7 +403,7 @@ class PVSystem:
 
         iam_model : string, default 'physical'
             The IAM model to be used. Valid strings are 'physical', 'ashrae',
-            'martin_ruiz', 'sapm' and 'interp'.
+            'martin_ruiz', 'sapm', 'interp', and 'schlick'.
         Returns
         -------
         iam : numeric or tuple of numeric
@@ -901,8 +900,6 @@ class PVSystem:
             for array, data in zip(self.arrays, data)
         )
 
-    @renamed_kwarg_warning(
-        "0.13.0", "g_poa_effective", "effective_irradiance")
     @_unwrap_single_value
     def pvwatts_dc(self, effective_irradiance, temp_cell):
         """
@@ -1247,7 +1244,7 @@ class Array:
 
         iam_model : string, default 'physical'
             The IAM model to be used. Valid strings are 'physical', 'ashrae',
-            'martin_ruiz', 'sapm' and 'interp'.
+            'martin_ruiz', 'sapm', 'interp' and 'schlick'.
 
         Returns
         -------
@@ -1260,7 +1257,7 @@ class Array:
             if `iam_model` is not a valid model name.
         """
         model = iam_model.lower()
-        if model in ['ashrae', 'physical', 'martin_ruiz', 'interp']:
+        if model in ['ashrae', 'physical', 'martin_ruiz', 'interp', 'schlick']:
             func = getattr(iam, model)  # get function at pvlib.iam
             # get all parameters from function signature to retrieve them from
             # module_parameters if present
@@ -3035,8 +3032,6 @@ def scale_voltage_current_power(data, voltage=1, current=1):
     return df_sorted
 
 
-@renamed_kwarg_warning(
-    "0.13.0", "g_poa_effective", "effective_irradiance")
 def pvwatts_dc(effective_irradiance, temp_cell, pdc0, gamma_pdc, temp_ref=25.,
                k=None, cap_adjustment=False):
     r"""
