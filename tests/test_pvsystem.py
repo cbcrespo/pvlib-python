@@ -156,10 +156,16 @@ def test_PVSystem_multi_array_get_iam_diffuse():
                                marion_model='ashrae', **model_params)
 
 
-def test_PVSystem_get_iam_diffuse_invalid(sapm_module_params, mocker):
+def test_PVSystem_get_iam_diffuse_invalid(sapm_module_params):
     system = pvsystem.PVSystem(module_parameters=sapm_module_params)
     with pytest.raises(ValueError):
         system.get_iam_diffuse(45, iam_model='not_a_model')
+
+
+def test_PVSystem_get_iam_diffuse_marion_missing_model(sapm_module_params):
+    system = pvsystem.PVSystem(module_parameters=sapm_module_params)
+    with pytest.raises(ValueError, match="marion_model must be specified"):
+        system.get_iam_diffuse(45, iam_model='marion_diffuse')
 
 
 def test_retrieve_sam_raises_exceptions():

@@ -438,8 +438,8 @@ class PVSystem:
             'martin_ruiz_diffuse', and 'schlick_diffuse'.
         marion_model : string, default None
             The IAM function to evaluate across a solid angle. Only used when
-            ``iam_model='marion_diffuse'``. Must be one of `'ashrae',
-            'physical', 'martin_ruiz', 'sapm', and 'schlick'`.
+            ``iam_model='marion_diffuse'``. Must be one of 'ashrae',
+            'physical', 'martin_ruiz', 'sapm', and 'schlick'.
 
         kwargs : dict, optional
             Additional keyword arguments passed to the IAM model function.
@@ -1289,7 +1289,7 @@ class Array:
             'martin_ruiz_diffuse' and 'schlick_diffuse'.
         marion_model : string, default None
             The IAM function to evaluate across a solid angle. Only used when
-            ``iam_model='marion_diffuse'``. Must be one of `'ashrae',
+            ``iam_model='marion_diffuse'``. Must be one of 'ashrae',
             'physical', 'martin_ruiz' and 'sapm'.
 
         kwargs : dict, optional
