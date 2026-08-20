@@ -113,7 +113,7 @@ def test_PVSystem_get_iam_invalid(sapm_module_params, mocker):
         system.get_iam(45, iam_model='not_a_model')
 
 
-def test_PVSystem_get_iam_diffuse_marion(mocker):
+def test_PVSystem_get_iam_diffuse_marion(sapm_module_params, mocker):
     model_params = {'b': 0.05}
     m = mocker.spy(_iam, 'marion_diffuse')
     system = pvsystem.PVSystem(module_parameters=model_params)
@@ -125,9 +125,10 @@ def test_PVSystem_get_iam_diffuse_marion(mocker):
     assert isinstance(iam, dict)
     assert set(iam.keys()) == {'sky', 'ground', 'horizon'}
 
+    system = pvsystem.PVSystem(module_parameters=sapm_module_params)
     tilt = pd.Series([30, 60])
     iam = system.get_iam_diffuse(tilt, iam_model='marion_diffuse',
-                                 marion_model='ashrae')
+                                 marion_model='sapm')
     assert isinstance(iam, pd.DataFrame)
 
 
@@ -165,6 +166,13 @@ def test_PVSystem_get_iam_diffuse_invalid(sapm_module_params):
     system = pvsystem.PVSystem(module_parameters=sapm_module_params)
     with pytest.raises(ValueError):
         system.get_iam_diffuse(45, iam_model='not_a_model')
+
+
+def test_PVSystem_get_iam_diffuse_marion_invalid(sapm_module_params):
+    system = pvsystem.PVSystem(module_parameters=sapm_module_params)
+    with pytest.raises(ValueError):
+        system.get_iam_diffuse(45, iam_model='marion_diffuse',
+                               marion_model='not_a_model')
 
 
 def test_PVSystem_get_iam_diffuse_marion_missing_model(sapm_module_params):
