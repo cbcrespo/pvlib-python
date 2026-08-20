@@ -1271,7 +1271,7 @@ class Array:
             raise ValueError(model + ' is not a valid IAM model')
 
     def get_iam_diffuse(self, surface_tilt, iam_model='marion_diffuse',
-                        marion_model=None, **kwargs):
+                        marion_model=None):
         """
         Determine the incidence angle modifier for various diffuse irradiance
         components using the method specified by ``iam_model``.
@@ -1290,10 +1290,7 @@ class Array:
         marion_model : string, default None
             The IAM function to evaluate across a solid angle. Only used when
             ``iam_model='marion_diffuse'``. Must be one of 'ashrae',
-            'physical', 'martin_ruiz' and 'sapm'.
-
-        kwargs : dict, optional
-            Additional keyword arguments passed to the IAM model function.
+            'physical', 'martin_ruiz', 'sapm', and 'schlick'.
 
         Returns
         -------
@@ -1312,18 +1309,32 @@ class Array:
         if model == 'marion_diffuse' and marion_model is None:
             raise ValueError('marion_model must be specified when '
                              'iam_model="marion_diffuse"')
-        if model in ['marion_diffuse', 'martin_ruiz_diffuse',
-                     'schlick_diffuse']:
+        if model == 'marion_diffuse':
+            if marion_model in ['ashrae', 'physical', 'martin_ruiz',
+                                'schlick']:
+                func = getattr(iam, marion_model)
+                params = set(inspect.signature(func).parameters.keys())
+                params.discard('aoi')
+                kwargs = _build_kwargs(params, self.module_parameters)
+                iams = iam.marion_diffuse(model=marion_model,
+                                          surface_tilt=surface_tilt,
+                                          **kwargs)
+            elif marion_model == 'sapm':
+                iams = iam.marion_diffuse(model='sapm',
+                                          surface_tilt=surface_tilt,
+                                          module=self.module_parameters)
+            else:
+                raise ValueError(marion_model + ' is not a valid IAM model')
+        elif model == 'martin_ruiz_diffuse':
             func = getattr(iam, model)  # get function at pvlib.iam
             # get all parameters from function signature to retrieve them from
             # module_parameters if present
             params = set(inspect.signature(func).parameters.keys())
-            kwargs.update(_build_kwargs(params, self.module_parameters))
-            if iam_model == 'marion_diffuse':
-                iams = func(model=marion_model, surface_tilt=surface_tilt,
-                            **kwargs)
-            else:
-                iams = func(surface_tilt=surface_tilt, **kwargs)
+            params.discard('aoi')
+            kwargs = _build_kwargs(params, self.module_parameters)
+            iams = iam.martin_ruiz_diffuse(surface_tilt=surface_tilt, **kwargs)
+        elif model == 'schlick_diffuse':
+            iams = iam.schlick_diffuse(surface_tilt=surface_tilt)
         else:
             raise ValueError(model + ' is not a valid diffuse IAM model')
 
