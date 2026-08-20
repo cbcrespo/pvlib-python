@@ -119,14 +119,15 @@ def test_PVSystem_get_iam_diffuse_marion(mocker):
     system = pvsystem.PVSystem(module_parameters=model_params)
     tilt = 30
     iam = system.get_iam_diffuse(tilt, iam_model='marion_diffuse',
-                                 marion_model='ashrae', **model_params)
-    m.assert_called_with(model='ashrae', surface_tilt=tilt, **model_params)
+                                 marion_model='ashrae')
+    m.assert_called_with(model='ashrae', surface_tilt=tilt,
+                         **model_params)
     assert isinstance(iam, dict)
     assert set(iam.keys()) == {'sky', 'ground', 'horizon'}
 
     tilt = pd.Series([30, 60])
     iam = system.get_iam_diffuse(tilt, iam_model='marion_diffuse',
-                                 marion_model='ashrae', **model_params)
+                                 marion_model='ashrae')
     assert isinstance(iam, pd.DataFrame)
 
 
@@ -151,13 +152,13 @@ def test_PVSystem_multi_array_get_iam_diffuse():
                                module_parameters=model_params)]
     )
     iam = system.get_iam_diffuse((30, 60), iam_model='marion_diffuse',
-                                 marion_model='ashrae', **model_params)
+                                 marion_model='ashrae')
     assert len(iam) == 2
     assert iam[0] != iam[1]
     with pytest.raises(ValueError,
                        match="Length mismatch for per-array parameter"):
         system.get_iam_diffuse((30,), iam_model='marion_diffuse',
-                               marion_model='ashrae', **model_params)
+                               marion_model='ashrae')
 
 
 def test_PVSystem_get_iam_diffuse_invalid(sapm_module_params):
