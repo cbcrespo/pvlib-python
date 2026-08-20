@@ -1560,6 +1560,23 @@ def test_infer_aoi_model_invalid(location, system_no_aoi):
         ModelChain(system_no_aoi, location, spectral_model='no_loss')
 
 
+@pytest.mark.parametrize('iam_diffuse_model', [
+    'marion_diffuse', 'martin_ruiz_diffuse', 'schlick_diffuse',
+    'no_loss', None
+])
+def test_iam_diffuse_models(sapm_dc_snl_ac_system, location,
+                            iam_diffuse_model, weather, mocker):
+    mc = ModelChain(sapm_dc_snl_ac_system, location, dc_model='sapm',
+                    iam_diffuse_model=iam_diffuse_model,
+                    spectral_model='no_loss')
+    m = mocker.spy(sapm_dc_snl_ac_system, 'get_iam_diffuse')
+    mc.run_model(weather=weather)
+    assert m.call_count == 1
+    assert isinstance(mc.results.ac, pd.Series)
+    assert mc.results.ac.iloc[0] > 150 and mc.results.ac.iloc[0] < 200
+    assert mc.results.ac.iloc[1] < 1
+
+
 def constant_spectral_loss(mc):
     mc.results.spectral_modifier = 0.9
 
@@ -2052,6 +2069,8 @@ def test_ModelChain___repr__(sapm_dc_snl_ac_system, location):
         '  dc_model: sapm',
         '  ac_model: sandia_inverter',
         '  aoi_model: sapm_aoi_loss',
+        '  iam_diffuse_model: fd_diffuse_loss',
+        '  marion_diffuse_model: None',
         '  spectral_model: sapm_spectral_loss',
         '  temperature_model: sapm_temp',
         '  losses_model: no_extra_losses'
