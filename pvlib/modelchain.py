@@ -1222,23 +1222,25 @@ class ModelChain:
 
                 if not has_sky_components:
                     # The transposition model does not provide component-level
-                    # sky diffuse irradiance, so the sky diffuse component cannot
-                    # be corrected with the selected diffuse IAM model.
+                    # sky diffuse irradiance, so the sky diffuse component
+                    # cannot be corrected with the selected diffuse IAM model.
                     warnings.warn(
                         'The selected transposition_model does not provide '
-                        'component-level sky diffuse irradiance required by the '
-                        'selected iam_diffuse_model. Using an IAM of 1.0 for '
-                        '"poa_sky_diffuse".',
+                        'component-level sky diffuse irradiance required by '
+                        'the selected iam_diffuse_model. Using an IAM of 1.0 '
+                        'for "poa_sky_diffuse".',
                         UserWarning,
                     )
                     iam_ground = iam_diffuse_mod['ground']
-                    diffuse = (total_irrad['poa_sky_diffuse']
-                               + total_irrad['poa_ground_diffuse'] * iam_ground)
+                    diffuse = (
+                        total_irrad['poa_sky_diffuse']
+                        + total_irrad['poa_ground_diffuse'] * iam_ground
+                    )
                 else:
                     available_components = {
-                        irradiance_key: iam_key
-                        for irradiance_key, iam_key in diffuse_components.items()
-                        if irradiance_key in total_irrad
+                        irrad_key: iam_key
+                        for irrad_key, iam_key in diffuse_components.items()
+                        if irrad_key in total_irrad
                     }
 
                     diffuse = 0.0

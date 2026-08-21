@@ -1561,12 +1561,12 @@ def test_infer_aoi_model_invalid(location, system_no_aoi):
 
 
 @pytest.mark.parametrize(
-    'iam_diffuse_model, expected_call_count',[
-    ('marion_diffuse', 1),
-    ('martin_ruiz_diffuse', 1),
-    ('schlick_diffuse', 1),
-    ('no_loss', 0),
-    (None, 0)])
+    'iam_diffuse_model, expected_call_count', [
+        ('marion_diffuse', 1),
+        ('martin_ruiz_diffuse', 1),
+        ('schlick_diffuse', 1),
+        ('no_loss', 0),
+        (None, 0)])
 def test_iam_diffuse_models(sapm_dc_snl_ac_system, location,
                             iam_diffuse_model, expected_call_count,
                             weather, mocker):
@@ -1680,7 +1680,7 @@ def test_infer_marion_diffuse_model(
 def test_infer_iam_marion_diffuse_model_with_extra_params(
         location, system_no_aoi, weather, mocker):
     model_kwargs = {'n': 1.526, 'K': 4.0, 'L': 0.002,  # required
-        'n_ar': 1.8}  # extra
+                    'n_ar': 1.8}  # extra
     # test extra parameters not defined at iam._IAM_MODEL_PARAMS are passed
     m = mocker.spy(iam, 'physical')
     system_no_aoi.arrays[0].module_parameters.update(**model_kwargs)
