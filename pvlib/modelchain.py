@@ -910,9 +910,10 @@ class ModelChain:
         return self
 
     def no_diffuse_loss(self):
-        self.results.iam_diffuse_modifier = tuple(
-            1.0 for _ in self.system.arrays
-        )
+        if self.system.num_arrays == 1:
+            self.results.iam_diffuse_modifier = 1.0
+        else:
+            self.results.iam_diffuse_modifier = (1.0,) * self.system.num_arrays
         return self
 
     def fd_diffuse_loss(self):
@@ -1200,6 +1201,7 @@ class ModelChain:
                        iam_diffuse_mod):
             if isinstance(iam_diffuse_mod, dict):
                 direct = total_irrad['poa_direct']
+                # circumsolar is treated as direct
                 if 'poa_circumsolar' in total_irrad:
                     direct += total_irrad['poa_circumsolar']
                 direct *= aoi_mod
@@ -1209,42 +1211,59 @@ class ModelChain:
                     'poa_horizon': 'horizon',
                     'poa_ground_diffuse': 'ground',
                 }
-                available_components = {
-                    irradiance_key: iam_key
-                    for irradiance_key, iam_key in diffuse_components.items()
-                    if irradiance_key in total_irrad
+                sky_components = {
+                    'poa_isotropic',
+                    'poa_circumsolar',
+                    'poa_horizon',
                 }
+                has_sky_components = any(
+                    component in total_irrad for component in sky_components
+                )
 
-                if not available_components:
-                    raise ValueError(
-                        'Using a diffuse IAM model requires at least one of '
-                        '"poa_isotropic", "poa_horizon", or '
-                        '"poa_ground_diffuse" irradiance components, '
-                        'none of which are provided by the selected '
-                        'transposition_model ' + self.transposition_model +
-                        '. Please select a different transposition_model, '
-                        'or set iam_diffuse_model to "no_loss" or None.'
+                if not has_sky_components:
+                    # The transposition model does not provide component-level
+                    # sky diffuse irradiance, so the sky diffuse component cannot
+                    # be corrected with the selected diffuse IAM model.
+                    warnings.warn(
+                        'The selected transposition_model does not provide '
+                        'component-level sky diffuse irradiance required by the '
+                        'selected iam_diffuse_model. Using an IAM of 1.0 for '
+                        '"poa_sky_diffuse".',
+                        UserWarning,
                     )
-                diffuse = 0.0
-                for irrad_key, iam_key in available_components.items():
-                    iam = iam_diffuse_mod.get(iam_key)
-                    if iam is None:
-                        warnings.warn(
-                            'The selected iam_diffuse_model '
-                            'does not provide diffuse IAM for the '
-                            f'"{iam_key}" component, provided by the '
-                            'selected transposition_model '
-                            f'"{self.transposition_model}". '
-                            'Using an IAM of 1.0.',
-                            UserWarning,
-                        )
-                        iam = 1.0
-                    diffuse += total_irrad[irrad_key] * iam
+                    iam_ground = iam_diffuse_mod['ground']
+                    diffuse = (total_irrad['poa_sky_diffuse']
+                               + total_irrad['poa_ground_diffuse'] * iam_ground)
+                else:
+                    available_components = {
+                        irradiance_key: iam_key
+                        for irradiance_key, iam_key in diffuse_components.items()
+                        if irradiance_key in total_irrad
+                    }
+
+                    diffuse = 0.0
+                    for irrad_key, iam_key in available_components.items():
+                        iam = iam_diffuse_mod.get(iam_key)
+                        if iam is None:
+                            warnings.warn(
+                                'The selected iam_diffuse_model '
+                                'does not provide diffuse IAM for the '
+                                f'"{iam_key}" component, provided by the '
+                                'selected transposition_model '
+                                f'"{self.transposition_model}". '
+                                'Using an IAM of 1.0.',
+                                UserWarning,
+                            )
+                            iam = 1.0
+                        diffuse += total_irrad[irrad_key] * iam
             else:
                 direct = total_irrad['poa_direct'] * aoi_mod
                 diffuse = total_irrad['poa_diffuse'] * iam_diffuse_mod
             return spect_mod * (direct + diffuse)
         if isinstance(self.results.total_irrad, tuple):
+            if not isinstance(self.results.iam_diffuse_modifier, tuple):
+                self.results.iam_diffuse_modifier = (
+                    self.results.iam_diffuse_modifier,)
             self.results.effective_irradiance = tuple(
                 _eff_irrad(array.module_parameters, ti, sm, am, di) for
                 array, ti, sm, am, di in zip(
@@ -1573,6 +1592,8 @@ class ModelChain:
         self._prep_inputs_albedo(weather)
         self._prep_inputs_fixed()
 
+        diffuse_components = self.transposition_model != 'klucher'
+
         self.results.total_irrad = self.system.get_irradiance(
             self.results.solar_position['apparent_zenith'],
             self.results.solar_position['azimuth'],
@@ -1582,7 +1603,7 @@ class ModelChain:
             albedo=self.results.albedo,
             airmass=self.results.airmass['airmass_relative'],
             model=self.transposition_model,
-            diffuse_components=True
+            diffuse_components=diffuse_components,
         )
 
         return self
@@ -1827,8 +1848,7 @@ class ModelChain:
         weather = _to_tuple(weather)
         self.prepare_inputs(weather)
         self.aoi_model()
-        if callable(self.iam_diffuse_model):
-            self.iam_diffuse_model()
+        self.iam_diffuse_model()
         self.spectral_model()
 
         self.effective_irradiance_model()
