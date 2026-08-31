@@ -647,12 +647,13 @@ def marion_diffuse(model, surface_tilt, **kwargs):
 
 def marion_diffuse_tracking(model, surface_tilt, resolution=0.5, **kwargs):
     """
-    Determine diffuse irradiance incidence angle modifiers using Marion's
-    method of integrating over solid angle. This function is designed for
-    trackers, where ``surface_tilt`` is a vector, to avoid the computational
-    burden of calling ``marion_integrate`` for each tilt angle.
-    Instead, the IAM function is integrated once for a range of tilt angles,
-    and then interpolated to the requested tilt angles. For fixed-tilt systems,
+    Determine incidence angle modifiers (IAMs) for diffuse irradiance
+    using Marion's method of integrating over solid angles.
+    
+    This function supports trackers for which ``surface_tilt`` is a vector.
+    The IAM function is integrated once for tilt angles specified by
+    ``resolution``. IAM at other angles are determined by interpolation.
+    For fixed-tilt systems,
     use :py:func:`marion_diffuse`.
 
     Parameters
@@ -683,7 +684,7 @@ def marion_diffuse_tracking(model, surface_tilt, resolution=0.5, **kwargs):
           (89.5 <= zenith <= 90)
         * 'ground': radiation reflected from the ground (zenith >= 90)
 
-        See [1]_ for a detailed description of each class.
+        See [1]_ for a detailed description of each type.
 
     See Also
     --------
