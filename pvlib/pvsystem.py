@@ -1271,7 +1271,7 @@ class Array:
             raise ValueError(model + ' is not a valid IAM model')
 
     def get_iam_diffuse(self, surface_tilt, iam_model='marion_diffuse',
-                        marion_model=None):
+                        marion_model=None, **kwargs):
         """
         Determine the incidence angle modifier for various diffuse irradiance
         components using the method specified by ``iam_model``.
@@ -1322,7 +1322,8 @@ class Array:
             elif marion_model == 'sapm':
                 iams = iam.marion_diffuse(model='sapm',
                                           surface_tilt=surface_tilt,
-                                          module=self.module_parameters)
+                                          module=self.module_parameters,
+                                          **kwargs)
             else:
                 raise ValueError(marion_model + ' is not a valid IAM model')
         elif model == 'martin_ruiz_diffuse':
